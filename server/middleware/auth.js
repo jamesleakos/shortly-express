@@ -29,7 +29,7 @@ module.exports.createSession = (req, res, next) => {
       req.session = session;
       next();
     });
-  };
+};
 
 /************************************************************/
 // Add additional authentication middleware functions below
