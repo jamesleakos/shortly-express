@@ -18,6 +18,7 @@ app.use(CookieParser.parseCookies);
 app.use(Auth.createSession);
 
 
+<<<<<<< HEAD
 const verifySession = () => {
   return false;
 };
@@ -47,6 +48,48 @@ app.get('/links',
       })
       .error(error => {
         res.status(500).send(error);
+=======
+app.use(require('./middleware/cookieParser'));
+app.use(Auth.createSession);
+
+app.get('/', Auth.verifySession, (req, res) => {
+  res.render('index');
+});
+
+app.get('/create', Auth.verifySession, (req, res) => {
+  res.render('index');
+});
+
+app.get('/links', Auth.verifySession, (req, res, next) => {
+  models.Links.getAll()
+    .then(links => {
+      res.status(200).send(links);
+    })
+    .error(error => {
+      res.status(500).send(error);
+    });
+});
+
+app.post('/links', Auth.verifySession, (req, res, next) => {
+  var url = req.body.url;
+  if (!models.Links.isValidUrl(url)) {
+    // send back a 404 if link is not valid
+    return res.sendStatus(404);
+  }
+
+  return models.Links.get({ url })
+    .then(link => {
+      if (link) {
+        throw link;
+      }
+      return models.Links.getUrlTitle(url);
+    })
+    .then(title => {
+      return models.Links.create({
+        url: url,
+        title: title,
+        baseUrl: req.headers.origin
+>>>>>>> f9779f866e8800cdfaeab200e4039f3f7f96ac56
       });
   });
 
@@ -99,14 +142,39 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 
-app.get('/logout', (req, res) => {
-  // need to log them out first
-  // need to delete the session
-  return models.Sessions.delete({hash: req.cookies.shortlyid})
+app.post('/login', (req, res, next) => {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  return models.Users.get({ username })
+    .then(user => {
+
+      if (!user || !models.Users.compare(password, user.password, user.salt)) {
+        // user doesn't exist or the password doesn't match
+        throw new Error('Username and password do not match');
+      }
+
+      return models.Sessions.update({ hash: req.session.hash }, { userId: user.id });
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    })
+    .catch(() => {
+      res.redirect('/login');
+    });
+});
+
+app.get('/logout', (req, res, next) => {
+
+  return models.Sessions.delete({ hash: req.cookies.shortlyid })
     .then(() => {
       res.clearCookie('shortlyid');
       res.redirect('/login');
     })
+<<<<<<< HEAD
     .catch((err) => {
       res.status(500).send();
     });
@@ -158,6 +226,41 @@ app.post('/login', (req, res) => {
     .catch((err) => {
       console.log(err);
       res.status(404).send('User not found');
+=======
+    .error(error => {
+      res.status(500).send(error);
+    });
+});
+
+app.get('/signup', (req, res) => {
+  res.render('signup');
+});
+
+app.post('/signup', (req, res, next) => {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  return models.Users.get({ username })
+    .then(user => {
+      if (user) {
+        // user already exists; throw user to catch and redirect
+        throw user;
+      }
+
+      return models.Users.create({ username, password });
+    })
+    .then(results => {
+      return models.Sessions.update({ hash: req.session.hash }, { userId: results.insertId });
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    })
+    .catch(user => {
+      res.redirect('/signup');
+>>>>>>> f9779f866e8800cdfaeab200e4039f3f7f96ac56
     });
 });
 
