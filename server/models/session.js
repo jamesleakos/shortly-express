@@ -20,7 +20,11 @@ class Sessions extends Model {
    * with a user that is logged in.
    */
   isLoggedIn(session) {
-    return !!session.user;
+    return this.get({hash: session.hash})
+      .then((result) => {
+        console.log('result: ' + JSON.stringify(result));
+        return !!result.user;
+      });
   }
 
   /**
